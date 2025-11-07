@@ -1,6 +1,6 @@
 "use client";
 
-// import { Sparkles, Github, BookOpen } from 'lucide-react';
+import { Sparkles, Github, BookOpen } from 'lucide-react';
 
 export default function CTASection() {
   return (
@@ -10,7 +10,7 @@ export default function CTASection() {
           {/* Main CTA */}
           <div className="mb-16">
             <div className="inline-flex items-center rounded-full bg-white/10 px-4 py-2 text-sm text-white mb-8">
-              {/* <Sparkles className="mr-2 h-4 w-4" /> */}
+              <Sparkles className="mr-2 h-4 w-4" />
               Join the future of governance
             </div>
             
@@ -52,7 +52,7 @@ export default function CTASection() {
                className="bg-white/10 backdrop-blur rounded-xl p-6 hover:bg-white/20 transition-colors cursor-pointer" 
                onClick={() => window.open('https://github.com/DIFoundation/NexaPoll/blob/main/README.md', '_blank')}>
                 <div className="flex items-center justify-center w-12 h-12 bg-white/20 rounded-lg mb-4 mx-auto">
-                  {/* <BookOpen className="w-6 h-6 text-white" /> */}
+                  <BookOpen className="w-6 h-6 text-white" />
                 </div>
                 <h4 className="text-lg font-semibold text-white mb-2">Documentation</h4>
                 <p className="text-blue-100 text-sm">
@@ -65,7 +65,7 @@ export default function CTASection() {
                className="bg-white/10 backdrop-blur rounded-xl p-6 hover:bg-white/20 transition-colors cursor-pointer" 
                onClick={() => window.open('https://github.com/DIFoundation/NexaPoll', '_blank')}>
                 <div className="flex items-center justify-center w-12 h-12 bg-white/20 rounded-lg mb-4 mx-auto">
-                  {/* <Github className="w-6 h-6 text-white" /> */}
+                  <Github className="w-6 h-6 text-white" />
                 </div>
                 <h4 className="text-lg font-semibold text-white mb-2">Open Source</h4>
                 <p className="text-blue-100 text-sm">
@@ -78,7 +78,7 @@ export default function CTASection() {
                className="bg-white/10 backdrop-blur rounded-xl p-6 hover:bg-white/20 transition-colors cursor-pointer" 
                onClick={() => window.open('https://x.com/nexapoll', '_blank')}>
                 <div className="flex items-center justify-center w-12 h-12 bg-white/20 rounded-lg mb-4 mx-auto">
-                  {/* <Sparkles className="w-6 h-6 text-white" /> */}
+                  <Sparkles className="w-6 h-6 text-white" />
                 </div>
                 <h4 className="text-lg font-semibold text-white mb-2">Community</h4>
                 <p className="text-blue-100 text-sm">

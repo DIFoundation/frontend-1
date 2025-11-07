@@ -1,6 +1,6 @@
 "use client";
 
-// import { ArrowRight, Shield } from 'lucide-react';
+import { ArrowRight, Shield } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function Hero() {
@@ -19,7 +19,7 @@ export default function Hero() {
         <div className="text-center">
           {/* Badge */}
           <div className="inline-flex items-center rounded-full bg-blue-100 px-4 py-2 text-sm font-medium text-blue-800 mb-8">
-            {/* <Shield className="mr-2 h-4 w-4" /> */}
+            <Shield className="mr-2 h-4 w-4" />
             Decentralized. Secure. Transparent.
           </div>
 
@@ -40,7 +40,7 @@ export default function Hero() {
           <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center items-center">
             <button onClick={goHome} className="inline-flex items-center rounded-lg bg-blue-600 px-8 py-4 text-lg font-semibold text-white shadow-lg hover:bg-blue-700 transition-colors duration-200">
               Get Started
-              {/* <ArrowRight className="ml-2 h-5 w-5" /> */}
+              <ArrowRight className="ml-2 h-5 w-5" />
             </button>
             <button className="inline-flex items-center rounded-lg border-2 border-gray-300 px-8 py-4 text-lg font-semibold text-gray-700 hover:border-gray-400 hover:bg-gray-50 transition-colors duration-200">
               View Demo

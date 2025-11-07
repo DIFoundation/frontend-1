@@ -1,40 +1,40 @@
 "use client";
 
 import Image from 'next/image';
-// import { ExternalLink } from 'lucide-react';
-// import { siGithub, siX, siDiscord, siTelegram } from 'simple-icons/icons';
+import { ExternalLink } from 'lucide-react';
+import { siGithub, siX, siDiscord, siTelegram } from 'simple-icons/icons';
 
 // Helper function to convert simple-icons to React components
-// interface IconProps {
-//   path: string;
-//   title?: string;
-// }
+interface IconProps {
+  path: string;
+  title?: string;
+}
 
-// interface SimpleIconProps {
-//   icon: IconProps;
-//   size?: number | string;
-//   className?: string;
-// }
+interface SimpleIconProps {
+  icon: IconProps;
+  size?: number | string;
+  className?: string;
+}
 
-// const SimpleIcon: React.FC<SimpleIconProps> = ({ 
-//   icon, 
-//   size = 24, 
-//   className = 'text-white bg-red-600 rounded-full p-2' 
-// }) => {
-//   return (
-//     <svg
-//       role="img"
-//       viewBox="0 0 24 24"
-//       width={size}
-//       height={size}
-//       className={className}
-//       fill="currentColor"
-//       xmlns="http://www.w3.org/2000/svg"
-//     >
-//       <path d={icon.path} />
-//     </svg>
-//   );
-// };
+const SimpleIcon: React.FC<SimpleIconProps> = ({ 
+  icon, 
+  size = 24, 
+  className = 'text-white bg-red-600 rounded-full p-2' 
+}) => {
+  return (
+    <svg
+      role="img"
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      className={className}
+      fill="currentColor"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path d={icon.path} />
+    </svg>
+  );
+};
 
 const navigation = {
   product: [
@@ -73,13 +73,13 @@ export default function Footer() {
             <div className="col-span-2">
               <div className="flex items-center mb-4">
                 <Image
-                  src="/NexaPoll.png"
+                  src="/Pollverse.png"
                   alt="Logo"
                   width={32}
                   height={32}
                   className="mr-3"
                 />
-                <span className="text-xl font-bold text-white">NexaPoll</span>
+                <span className="text-xl font-bold text-white">Pollverse</span>
               </div>
               <p className="text-gray-400 text-sm mb-6 max-w-md">
                 Empowering communities with transparent, decentralized governance. 
@@ -87,13 +87,13 @@ export default function Footer() {
               </p>
               <div className="flex space-x-4">
                 <a 
-                  href="https://github.com/yourusername/nexapoll" 
+                  href="https://github.com/pollverse/frontend" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-gray-400 hover:text-white transition-colors"
                   aria-label="GitHub"
                 >
-                  {/* <SimpleIcon icon={siGithub} className="w-5 h-5" /> */}
+                  <SimpleIcon icon={siGithub} className="w-5 h-5" />
                 </a>
                 <a 
                   href="https://twitter.com/yourusername" 
@@ -102,7 +102,7 @@ export default function Footer() {
                   className="text-gray-400 hover:text-white transition-colors"
                   aria-label="Twitter"
                 >
-                  {/* <SimpleIcon icon={siX} className="w-5 h-5" /> */}
+                  <SimpleIcon icon={siX} className="w-5 h-5" />
                 </a>
                 <a 
                   href="https://discord.gg/yourinvite" 
@@ -111,7 +111,7 @@ export default function Footer() {
                   className="text-gray-400 hover:text-white transition-colors"
                   aria-label="Discord"
                 >
-                  {/* <SimpleIcon icon={siDiscord} className="w-5 h-5" /> */}
+                  <SimpleIcon icon={siDiscord} className="w-5 h-5" />
                 </a>
                 <a 
                   href="https://t.me/yourchannel" 
@@ -120,7 +120,7 @@ export default function Footer() {
                   className="text-gray-400 hover:text-white transition-colors"
                   aria-label="Telegram"
                 >
-                  {/* <SimpleIcon icon={siTelegram} className="w-5 h-5" /> */}
+                  <SimpleIcon icon={siTelegram} className="w-5 h-5" />
                 </a>
               </div>
             </div>
@@ -157,9 +157,9 @@ export default function Footer() {
                       className="text-sm text-gray-400 hover:text-white transition-colors flex items-center"
                     >
                       {item.name}
-                      {/* {(item.name === 'Documentation' || item.name === 'API Reference') && (
-                        // <ExternalLink className="w-3 h-3 ml-1" />
-                      )} */}
+                      {(item.name === 'Documentation' || item.name === 'API Reference') && (
+                        <ExternalLink className="w-3 h-3 ml-1" />
+                      )}
                     </a>
                   </li>
                 ))}
@@ -210,7 +210,7 @@ export default function Footer() {
         <div className="border-t border-gray-800 py-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="text-sm text-gray-400">
-              &copy; {new Date().getFullYear()} NexaPoll. All rights reserved.
+              &copy; {new Date().getFullYear()} Pollverse. All rights reserved.
             </div>
             <div className="mt-4 md:mt-0 text-sm text-gray-400">
               Built with for the decentralized future

@@ -4,14 +4,14 @@ import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
-// import { useAppKitAccount } from "@reown/appkit/react";
+import { useAppKitAccount } from "@reown/appkit/react";
 // import { CustomNetworkButton } from "./CustomNetworkButton";
 // import { CustomConnectButton } from "./CustomConnectButton";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const pathname = usePathname();
-  // const { isConnected } = useAppKitAccount();
+  const { isConnected } = useAppKitAccount();
 
   // Common links that are always visible
   const commonLinks = [
@@ -38,12 +38,12 @@ const Header = () => {
             <Link href="/" className="shrink-0 flex items-center">
               <Image
                 src="/NexaPollCircle.png"
-                alt="NexaPoll"
+                alt="Pollverse"
                 width={100}
                 height={100}
                 className="rounded-full object-contain h-16 w-16"
               />
-              <span className="text-xl font-bold text-blue-600">NexaPoll</span>
+              <span className="text-xl font-bold text-blue-600">Pollverse</span>
             </Link>
             <nav className="hidden md:ml-6 md:flex md:space-x-8">
               {navLinks.map((link) => (
