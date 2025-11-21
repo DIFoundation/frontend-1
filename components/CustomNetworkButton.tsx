@@ -6,7 +6,7 @@ import { celoSepolia, baseSepolia } from 'viem/chains';
 import { CustomButton } from "./ui/CustomButton";
 import Image from "next/image";
 import { ChevronDown } from 'lucide-react';
-import { chains as supportedChains } from "../providers/RainbowKitProvider";
+import { networks as supportedChains } from "../config";
 
 const CHAIN_ICONS: Record<number, string> = {
   [celoSepolia.id]: '/celo.png',
@@ -80,12 +80,12 @@ export function CustomNetworkButton() {
           ) : null
         }
         variant="secondary"
-        className="flex items-center gap-1"
+        className="flex flex-row items-center gap-1"
         aria-haspopup="true"
         aria-expanded={isOpen}
       >
         {isUnsupported 
-          ? 'Unsupported Network' 
+          ? 'Wrong Network' 
           : currentChain 
             ? CHAIN_NAMES[currentChain.id] || currentChain.name
             : 'Select Network'

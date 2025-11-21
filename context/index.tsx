@@ -16,10 +16,10 @@ if (!projectId) {
 
 // Set up metadata
 const metadata = {
-  name: 'NexaPoll',
-  description: 'NexBuild and Govern with Confidence',
-  url: 'https://nexapoll.io', // origin must match your domain & subdomain
-  icons: ['/favicon.ico']
+  name: 'appkit-example',
+  description: 'AppKit Example',
+  url: 'https://appkitexampleapp.com', // origin must match your domain & subdomain
+  icons: ['https://avatars.githubusercontent.com/u/179229932']
 }
 
 // Create the modal
@@ -34,19 +34,12 @@ const modal = createAppKit({
   }
 })
 
-console.log("modal: ", modal)
-
-
 function ContextProvider({ children, cookies }: { children: ReactNode; cookies: string | null }) {
   const initialState = cookieToInitialState(wagmiAdapter.wagmiConfig as Config, cookies)
 
   return (
     <WagmiProvider config={wagmiAdapter.wagmiConfig as Config} initialState={initialState}>
-      <QueryClientProvider client={queryClient}>
-        {/* <AppKitProvider> */}
-          {children}
-        {/* </AppKitProvider> */}
-      </QueryClientProvider>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     </WagmiProvider>
   )
 }
