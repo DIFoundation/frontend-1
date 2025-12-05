@@ -583,15 +583,15 @@ export function TokenTab({ }: TokenTabProps) {
                     </p>
                     <div className="space-y-2 text-sm">
                       <div className="flex items-start">
-                        <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
+                        <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 mr-2 shrink-0" />
                         <span>Earn {tokenData.stakingApr}% APR in staking rewards</span>
                       </div>
                       <div className="flex items-start">
-                        <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
+                        <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 mr-2 shrink-0" />
                         <span>Participate in governance proposals and voting</span>
                       </div>
                       <div className="flex items-start">
-                        <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
+                        <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 mr-2 shrink-0" />
                         <span>Unstake at any time (7-day cooldown period applies)</span>
                       </div>
                     </div>

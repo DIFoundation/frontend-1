@@ -210,7 +210,7 @@ export function OverviewTab({ dao, proposals }: OverviewTabProps) {
           <div className="space-y-4">
             {recentActivities.map((activity) => (
               <div key={activity.id} className="flex items-start gap-4">
-                <div className="flex-shrink-0">
+                <div className="shrink-0">
                   {getActivityIcon(activity.type)}
                 </div>
                 <div className="flex-1 min-w-0">
