@@ -24,7 +24,7 @@ export function DaoHeader({ dao }: DaoHeaderProps) {
   return (
     <header className="border-b">
       <div className="">
-        <div className="h-48 bg-gradient-to-r from-blue-500 to-purple-600" />
+        <div className="h-48 bg-linear-to-r from-blue-500 to-purple-600" />
         <Button
           variant="ghost"
           onClick={() => router.back()}
