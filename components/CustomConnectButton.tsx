@@ -1,43 +1,26 @@
+// components/CustomConnectButton.tsx
 "use client"
 
-import { useAccount } from 'wagmi';
-import { Button } from './ui/button';
-import { useAppKit } from '@reown/appkit/react';
+import { useAppKit, useAppKitAccount } from "@reown/appkit/react"
+import { CustomButton } from "./ui/CustomButton"
 
 export function CustomConnectButton() {
-  const { isConnected, address } = useAccount()
-  const { open } = useAppKit();
+  const { open } = useAppKit()
+  const { isConnected, address } = useAppKitAccount()
 
-  const shortAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : '';
-
-
-  function handleCOnnectWallet() {
-    if (!isConnected) {
-      open({view: "Connect"})
+  const handleClick = () => {
+    if (isConnected) {
+      open({ view: "Account" })
     } else {
-      open({view: "Account"})
+      open({ view: "Connect" })
     }
   }
 
-  // If wallet is connected, show disconnect button
-  if (isConnected && address) {
-    return (
-      <Button
-        onClick={handleCOnnectWallet}
-        variant="secondary"
-      >
-        {shortAddress}
-      </Button>
-    );
-  }
-
-  // If wallet is not connected, show RainbowKit connect modal
   return (
-    <Button
-      onClick={handleCOnnectWallet}
-      variant="secondary"
-    >
-      Connect Wallet
-    </Button>
-  );
+    <CustomButton
+      label={isConnected ? `${address?.slice(0, 6)}...${address?.slice(-4)}` : "Connect Wallet"}
+      onClick={handleClick}
+      variant="primary"
+    />
+  )
 }
