@@ -13,7 +13,7 @@ export default function Hero() {
   return (
     <section className="relative overflow-hidden bg-white pt-16 pb-24">
       {/* Background decoration */}
-      <div className="absolute inset-0 bg-linear-to-r from-blue-50 to-indigo-100 opacity-50"></div>
+      <div className="absolute inset-0 bg-gradient-to-r from-blue-50 to-indigo-100 opacity-50"></div>
       
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center">

@@ -35,15 +35,15 @@ const Header = () => {
     <header className="bg-white shadow-sm sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
-            <Link href="/" className="shrink-0 flex items-center">
+            <Link href="/" className="flex-shrink-0 flex items-center">
               <Image
                 src="/NexaPollCircle.png"
-                alt="Pollverse"
+                alt="NexaPoll"
                 width={100}
                 height={100}
                 className="rounded-full object-contain h-16 w-16"
               />
-              <span className="text-xl font-bold text-blue-600">Pollverse</span>
+              <span className="text-xl font-bold text-blue-600">NexaPoll</span>
             </Link>
             <nav className="hidden md:ml-6 md:flex md:space-x-8">
               {navLinks.map((link) => (
@@ -58,10 +58,10 @@ const Header = () => {
                 >
                   {link.name}
                 </Link>
-               ))}
+              ))}
             </nav>
 
-          <div className="hidden md:ml-4 md:shrink-0 md:flex md:items-center space-x-2">
+          <div className="hidden md:ml-4 md:flex-shrink-0 md:flex md:items-center space-x-2">
             <CustomConnectButton />
             <CustomNetworkButton />
           </div>

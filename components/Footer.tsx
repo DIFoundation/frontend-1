@@ -73,13 +73,13 @@ export default function Footer() {
             <div className="col-span-2">
               <div className="flex items-center mb-4">
                 <Image
-                  src="/Pollverse.png"
+                  src="/NexaPoll.png"
                   alt="Logo"
                   width={32}
                   height={32}
                   className="mr-3"
                 />
-                <span className="text-xl font-bold text-white">Pollverse</span>
+                <span className="text-xl font-bold text-white">NexaPoll</span>
               </div>
               <p className="text-gray-400 text-sm mb-6 max-w-md">
                 Empowering communities with transparent, decentralized governance. 
@@ -87,7 +87,7 @@ export default function Footer() {
               </p>
               <div className="flex space-x-4">
                 <a 
-                  href="https://github.com/pollverse/frontend" 
+                  href="https://github.com/yourusername/nexapoll" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-gray-400 hover:text-white transition-colors"
@@ -210,7 +210,7 @@ export default function Footer() {
         <div className="border-t border-gray-800 py-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="text-sm text-gray-400">
-              &copy; {new Date().getFullYear()} Pollverse. All rights reserved.
+              &copy; {new Date().getFullYear()} NexaPoll. All rights reserved.
             </div>
             <div className="mt-4 md:mt-0 text-sm text-gray-400">
               Built with for the decentralized future
