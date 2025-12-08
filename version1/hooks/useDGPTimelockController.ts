@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, useWatchContractEvent, usePublicClient } from 'wagmi';
+import { useConnection, useReadContract, useWriteContract, useWaitForTransactionReceipt, useWatchContractEvent, usePublicClient } from 'wagmi';
 import { Address, Hash, keccak256, encodePacked } from 'viem';
-import { timelockAbi } from '@/lib/abi/core/timelock';
+import { DGPTimelockController } from '@/lib/abis';
 
 export type OperationState = 0 | 1 | 2 | 3; // 0=Unset(Unknown), 1=Waiting(Pending), 2=Ready, 3=Done
 
@@ -50,12 +50,9 @@ export interface ScheduleBatchParams {
 const ZERO_HASH: Hash = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
 export function useTimelock(contractAddress?: Address) {
-  const { address: account } = useAccount();
+  const { address: account } = useConnection();
   const [operations, setOperations] = useState<Record<string, OperationDetails>>({});
-  const [
-    batchOperations, 
-    // setBatchOperations
-  ] = useState<Record<string, BatchOperationDetails>>({});
+  const [batchOperations, setBatchOperations] = useState<Record<string, BatchOperationDetails>>({});
   const publicClient = usePublicClient();
 
   // Get role hashes (constants)
@@ -64,7 +61,7 @@ export function useTimelock(contractAddress?: Address) {
     isLoading: isLoadingAdminRole,
   } = useReadContract({
     address: contractAddress,
-    abi: timelockAbi,
+    abi: DGPTimelockController,
     functionName: 'DEFAULT_ADMIN_ROLE',
     query: {
       enabled: !!contractAddress,
@@ -76,7 +73,7 @@ export function useTimelock(contractAddress?: Address) {
     isLoading: isLoadingProposerRole,
   } = useReadContract({
     address: contractAddress,
-    abi: timelockAbi,
+    abi: DGPTimelockController,
     functionName: 'PROPOSER_ROLE',
     query: {
       enabled: !!contractAddress,
@@ -88,7 +85,7 @@ export function useTimelock(contractAddress?: Address) {
     isLoading: isLoadingExecutorRole,
   } = useReadContract({
     address: contractAddress,
-    abi: timelockAbi,
+    abi: DGPTimelockController,
     functionName: 'EXECUTOR_ROLE',
     query: {
       enabled: !!contractAddress,
@@ -100,7 +97,7 @@ export function useTimelock(contractAddress?: Address) {
     isLoading: isLoadingCancellerRole,
   } = useReadContract({
     address: contractAddress,
-    abi: timelockAbi,
+    abi: DGPTimelockController,
     functionName: 'CANCELLER_ROLE',
     query: {
       enabled: !!contractAddress,
@@ -114,7 +111,7 @@ export function useTimelock(contractAddress?: Address) {
     refetch: refetchMinDelay,
   } = useReadContract({
     address: contractAddress,
-    abi: timelockAbi,
+    abi: DGPTimelockController,
     functionName: 'getMinDelay',
     query: {
       enabled: !!contractAddress,
@@ -127,7 +124,7 @@ export function useTimelock(contractAddress?: Address) {
     refetch: refetchHasAdminRole,
   } = useReadContract({
     address: contractAddress,
-    abi: timelockAbi,
+    abi: DGPTimelockController,
     functionName: 'hasRole',
     args: [adminRole as Hash, account as Address],
     query: {
@@ -140,7 +137,7 @@ export function useTimelock(contractAddress?: Address) {
     refetch: refetchHasProposerRole,
   } = useReadContract({
     address: contractAddress,
-    abi: timelockAbi,
+    abi: DGPTimelockController,
     functionName: 'hasRole',
     args: [proposerRole as Hash, account as Address],
     query: {
@@ -153,7 +150,7 @@ export function useTimelock(contractAddress?: Address) {
     refetch: refetchHasExecutorRole,
   } = useReadContract({
     address: contractAddress,
-    abi: timelockAbi,
+    abi: DGPTimelockController,
     functionName: 'hasRole',
     args: [executorRole as Hash, account as Address],
     query: {
@@ -166,7 +163,7 @@ export function useTimelock(contractAddress?: Address) {
     refetch: refetchHasCancellerRole,
   } = useReadContract({
     address: contractAddress,
-    abi: timelockAbi,
+    abi: DGPTimelockController,
     functionName: 'hasRole',
     args: [cancellerRole as Hash, account as Address],
     query: {
@@ -213,6 +210,13 @@ export function useTimelock(contractAddress?: Address) {
     error: cancelError
   } = useWriteContract();
 
+  const { 
+    writeContractAsync: updateDelayAsync, 
+    data: updateDelayTxHash,
+    isPending: isUpdateDelayPending,
+    error: updateDelayError
+  } = useWriteContract();
+
   // Wait for transaction receipts
   const { isLoading: isWaitingForSchedule, isSuccess: isScheduleSuccess } = useWaitForTransactionReceipt({
     hash: scheduleTxHash,
@@ -230,6 +234,10 @@ export function useTimelock(contractAddress?: Address) {
     hash: cancelTxHash,
   });
 
+  const { isLoading: isWaitingForUpdateDelay } = useWaitForTransactionReceipt({
+    hash: updateDelayTxHash,
+  });
+
   // Refresh operations after successful transactions
   useEffect(() => {
     if (isScheduleSuccess || isScheduleBatchSuccess || isExecuteSuccess || isCancelSuccess) {
@@ -240,25 +248,28 @@ export function useTimelock(contractAddress?: Address) {
   // Event listeners
   useWatchContractEvent({
     address: contractAddress,
-    abi: timelockAbi,
+    abi: DGPTimelockController,
     eventName: 'CallScheduled',
     onLogs(logs) {
       logs.forEach(log => {
         if ('args' in log && log.args) {
           const args = log.args as { id?: Hash; index?: bigint; target?: Address; value?: bigint; data?: string; predecessor?: Hash; delay?: bigint };
           const { id, target, value, data, predecessor, delay } = args;
-          const operation: OperationDetails = {
-            id: id as Hash,
-            target: target as Address,
-            value: (value as bigint) || 0n,
-            data: data as string,
-            predecessor: (predecessor as Hash) || ZERO_HASH,
-            salt: ZERO_HASH, // Not available in event
-            delay: (delay as bigint) || 0n,
-            timestamp: BigInt(Math.floor(Date.now() / 1000)),
-            state: 1, // Waiting/Pending
-          };
-          setOperations(prev => ({ ...prev, [operation.id]: operation }));
+          
+          if (id) {
+            const operation: OperationDetails = {
+              id: id as Hash,
+              target: target as Address,
+              value: (value as bigint) || 0n,
+              data: (data as string) || '0x',
+              predecessor: (predecessor as Hash) || ZERO_HASH,
+              salt: ZERO_HASH, // Not available in event
+              delay: (delay as bigint) || 0n,
+              timestamp: BigInt(Math.floor(Date.now() / 1000)),
+              state: 1, // Waiting/Pending
+            };
+            setOperations(prev => ({ ...prev, [operation.id]: operation }));
+          }
         }
       });
     },
@@ -266,20 +277,22 @@ export function useTimelock(contractAddress?: Address) {
 
   useWatchContractEvent({
     address: contractAddress,
-    abi: timelockAbi,
+    abi: DGPTimelockController,
     eventName: 'CallExecuted',
     onLogs(logs) {
       logs.forEach(log => {
         if ('args' in log && log.args) {
           const args = log.args as { id?: Hash };
           const { id } = args;
-          setOperations(prev => {
-            const updated = { ...prev };
-            if (updated[id as string]) {
-              updated[id as string].state = 3; // Done
-            }
-            return updated;
-          });
+          if (id) {
+            setOperations(prev => {
+              const updated = { ...prev };
+              if (updated[id as string]) {
+                updated[id as string].state = 3; // Done
+              }
+              return updated;
+            });
+          }
         }
       });
     },
@@ -287,57 +300,95 @@ export function useTimelock(contractAddress?: Address) {
 
   useWatchContractEvent({
     address: contractAddress,
-    abi: timelockAbi,
+    abi: DGPTimelockController,
     eventName: 'Cancelled',
     onLogs(logs) {
       logs.forEach(log => {
         if ('args' in log && log.args) {
           const args = log.args as { id?: Hash };
           const { id } = args;
-          setOperations(prev => {
-            const updated = { ...prev };
-            if (updated[id as string]) {
+          if (id) {
+            setOperations(prev => {
+              const updated = { ...prev };
               // Remove cancelled operations
               delete updated[id as string];
-            }
-            return updated;
-          });
+              return updated;
+            });
+            setBatchOperations(prev => {
+              const updated = { ...prev };
+              delete updated[id as string];
+              return updated;
+            });
+          }
         }
       });
     },
   });
 
-  // Helper to compute operation ID
-  const hashOperation = useCallback((
+  // Helper to compute operation ID using contract's hashOperation function
+  const hashOperation = useCallback(async (
     target: Address,
     value: bigint,
     data: string,
     predecessor: Hash,
     salt: Hash
-  ): Hash => {
-    return keccak256(
-      encodePacked(
-        ['address', 'uint256', 'bytes', 'bytes32', 'bytes32'],
-      [target, value, data as `0x${string}`, predecessor, salt]
-      )
-    ) as Hash;
-  }, []);
+  ): Promise<Hash> => {
+    if (!contractAddress || !publicClient) {
+      // Fallback to local computation
+      return keccak256(
+        encodePacked(
+          ['address', 'uint256', 'bytes', 'bytes32', 'bytes32'],
+          [target, value, data as `0x${string}`, predecessor, salt]
+        )
+      ) as Hash;
+    }
 
-  // Helper to compute batch operation ID
-  const hashOperationBatch = useCallback((
+    try {
+      const result = await publicClient.readContract({
+        address: contractAddress,
+        abi: DGPTimelockController,
+        functionName: 'hashOperation',
+        args: [target, value, data as `0x${string}`, predecessor, salt],
+      });
+      return result as Hash;
+    } catch (error) {
+      console.error('Error hashing operation:', error);
+      // Fallback to local computation
+      return keccak256(
+        encodePacked(
+          ['address', 'uint256', 'bytes', 'bytes32', 'bytes32'],
+          [target, value, data as `0x${string}`, predecessor, salt]
+        )
+      ) as Hash;
+    }
+  }, [contractAddress, publicClient]);
+
+  // Helper to compute batch operation ID using contract's hashOperationBatch function
+  const hashOperationBatch = useCallback(async (
     targets: Address[],
     values: bigint[],
     payloads: string[],
     predecessor: Hash,
     salt: Hash
-  ): Hash => {
-    return keccak256(
-      encodePacked(
-        ['address[]', 'uint256[]', 'bytes[]', 'bytes32', 'bytes32'],
-        [targets, values, payloads as `0x${string}`[], predecessor, salt]
-      )
-    ) as Hash;
-  }, []);
+  ): Promise<Hash> => {
+    if (!contractAddress || !publicClient) {
+      // Local computation not straightforward for arrays, return placeholder
+      throw new Error('Contract address or public client not available');
+    }
+
+    try {
+      const result = await publicClient.readContract({
+        address: contractAddress,
+        abi: DGPTimelockController,
+        functionName: 'hashOperationBatch',
+        args: [targets, values, payloads as `0x${string}`[], predecessor, salt],
+      });
+      return result as Hash;
+    } catch (error) {
+      console.error('Error hashing batch operation:', error);
+      throw error;
+    }
+  }, [contractAddress, publicClient]);
 
   // Check operation state
   const getOperationState = useCallback(async (id: Hash): Promise<OperationState> => {
@@ -346,7 +397,7 @@ export function useTimelock(contractAddress?: Address) {
     try {
       const result = await publicClient.readContract({
         address: contractAddress,
-        abi: timelockAbi,
+        abi: DGPTimelockController,
         functionName: 'getOperationState',
         args: [id],
       });
@@ -364,7 +415,7 @@ export function useTimelock(contractAddress?: Address) {
     try {
       const result = await publicClient.readContract({
         address: contractAddress,
-        abi: timelockAbi,
+        abi: DGPTimelockController,
         functionName: 'isOperationReady',
         args: [id],
       });
@@ -382,7 +433,7 @@ export function useTimelock(contractAddress?: Address) {
     try {
       const result = await publicClient.readContract({
         address: contractAddress,
-        abi: timelockAbi,
+        abi: DGPTimelockController,
         functionName: 'isOperationPending',
         args: [id],
       });
@@ -400,13 +451,31 @@ export function useTimelock(contractAddress?: Address) {
     try {
       const result = await publicClient.readContract({
         address: contractAddress,
-        abi: timelockAbi,
+        abi: DGPTimelockController,
         functionName: 'isOperationDone',
         args: [id],
       });
       return result as boolean;
     } catch (error) {
       console.error('Error checking if operation is done:', error);
+      return false;
+    }
+  }, [contractAddress, publicClient]);
+
+  // Check if operation exists
+  const isOperation = useCallback(async (id: Hash): Promise<boolean> => {
+    if (!contractAddress || !publicClient) return false;
+    
+    try {
+      const result = await publicClient.readContract({
+        address: contractAddress,
+        abi: DGPTimelockController,
+        functionName: 'isOperation',
+        args: [id],
+      });
+      return result as boolean;
+    } catch (error) {
+      console.error('Error checking if operation exists:', error);
       return false;
     }
   }, [contractAddress, publicClient]);
@@ -418,7 +487,7 @@ export function useTimelock(contractAddress?: Address) {
     try {
       const result = await publicClient.readContract({
         address: contractAddress,
-        abi: timelockAbi,
+        abi: DGPTimelockController,
         functionName: 'getTimestamp',
         args: [id],
       });
@@ -451,9 +520,9 @@ export function useTimelock(contractAddress?: Address) {
     try {
       const hash = await scheduleAsync({
         address: contractAddress,
-        abi: timelockAbi,
+        abi: DGPTimelockController,
         functionName: 'schedule',
-        args: [target, value, data, predecessor, salt, actualDelay],
+        args: [target, value, data as `0x${string}`, predecessor, salt, actualDelay],
       });
 
       return hash;
@@ -485,9 +554,9 @@ export function useTimelock(contractAddress?: Address) {
     try {
       const hash = await scheduleBatchAsync({
         address: contractAddress,
-        abi: timelockAbi,
+        abi: DGPTimelockController,
         functionName: 'scheduleBatch',
-        args: [targets, values, payloads, predecessor, salt, actualDelay],
+        args: [targets, values, payloads as `0x${string}`[], predecessor, salt, actualDelay],
       });
 
       return hash;
@@ -501,7 +570,7 @@ export function useTimelock(contractAddress?: Address) {
   const execute = useCallback(async (
     target: Address,
     value: bigint,
-    data: string,
+    payload: string,
     predecessor: Hash = ZERO_HASH,
     salt: Hash = ZERO_HASH
   ) => {
@@ -514,9 +583,9 @@ export function useTimelock(contractAddress?: Address) {
     try {
       const hash = await executeAsync({
         address: contractAddress,
-        abi: timelockAbi,
+        abi: DGPTimelockController,
         functionName: 'execute',
-        args: [target, value, data, predecessor, salt],
+        args: [target, value, payload as `0x${string}`, predecessor, salt],
         value, // Include value for payable operations
       });
 
@@ -545,9 +614,9 @@ export function useTimelock(contractAddress?: Address) {
 
       const hash = await executeBatchAsync({
         address: contractAddress,
-        abi: timelockAbi,
+        abi: DGPTimelockController,
         functionName: 'executeBatch',
-        args: [targets, values, payloads, predecessor, salt],
+        args: [targets, values, payloads as `0x${string}`[], predecessor, salt],
         value: totalValue,
       });
 
@@ -567,7 +636,7 @@ export function useTimelock(contractAddress?: Address) {
     try {
       const hash = await cancelAsync({
         address: contractAddress,
-        abi: timelockAbi,
+        abi: DGPTimelockController,
         functionName: 'cancel',
         args: [id],
       });
@@ -586,9 +655,9 @@ export function useTimelock(contractAddress?: Address) {
     }
 
     try {
-      const hash = await scheduleAsync({
+      const hash = await updateDelayAsync({
         address: contractAddress,
-        abi: timelockAbi,
+        abi: DGPTimelockController,
         functionName: 'updateDelay',
         args: [newDelay],
       });
@@ -598,7 +667,7 @@ export function useTimelock(contractAddress?: Address) {
       console.error('Error updating delay:', error);
       throw error;
     }
-  }, [contractAddress, scheduleAsync]);
+  }, [contractAddress, updateDelayAsync]);
 
   // Check if user has specific role
   const hasRole = useCallback(async (role: Hash, accountAddress?: Address): Promise<boolean> => {
@@ -610,7 +679,7 @@ export function useTimelock(contractAddress?: Address) {
     try {
       const result = await publicClient.readContract({
         address: contractAddress,
-        abi: timelockAbi,
+        abi: DGPTimelockController,
         functionName: 'hasRole',
         args: [role, addressToCheck],
       });
@@ -620,6 +689,48 @@ export function useTimelock(contractAddress?: Address) {
       return false;
     }
   }, [contractAddress, account, publicClient]);
+
+  // Grant a role to an account
+  const grantRole = useCallback(async (role: Hash, accountAddress: Address) => {
+    if (!contractAddress) {
+      throw new Error('Contract address not provided');
+    }
+
+    try {
+      const hash = await scheduleAsync({
+        address: contractAddress,
+        abi: DGPTimelockController,
+        functionName: 'grantRole',
+        args: [role, accountAddress],
+      });
+
+      return hash;
+    } catch (error) {
+      console.error('Error granting role:', error);
+      throw error;
+    }
+  }, [contractAddress, scheduleAsync]);
+
+  // Revoke a role from an account
+  const revokeRole = useCallback(async (role: Hash, accountAddress: Address) => {
+    if (!contractAddress) {
+      throw new Error('Contract address not provided');
+    }
+
+    try {
+      const hash = await scheduleAsync({
+        address: contractAddress,
+        abi: DGPTimelockController,
+        functionName: 'revokeRole',
+        args: [role, accountAddress],
+      });
+
+      return hash;
+    } catch (error) {
+      console.error('Error revoking role:', error);
+      throw error;
+    }
+  }, [contractAddress, scheduleAsync]);
 
   // Refresh all data
   const refresh = useCallback(async () => {
@@ -651,12 +762,14 @@ export function useTimelock(contractAddress?: Address) {
     isSchedulingBatch: isScheduleBatchPending || isWaitingForScheduleBatch,
     isExecuting: isExecutePending || isExecuteBatchPending || isWaitingForExecute,
     isCancelling: isCancelPending || isWaitingForCancel,
+    isUpdatingDelay: isUpdateDelayPending || isWaitingForUpdateDelay,
     
     // Errors
     scheduleError: scheduleError?.message || null,
     scheduleBatchError: scheduleBatchError?.message || null,
     executeError: executeError?.message || executeBatchError?.message || null,
     cancelError: cancelError?.message || null,
+    updateDelayError: updateDelayError?.message || null,
     
     // Role information
     roles: {
@@ -682,12 +795,15 @@ export function useTimelock(contractAddress?: Address) {
     cancel,
     updateDelay,
     hasRole,
+    grantRole,
+    revokeRole,
     
     // Query functions
     getOperationState,
     isOperationReady,
     isOperationPending,
     isOperationDone,
+    isOperation,
     getTimestamp,
     
     // Helpers
@@ -698,7 +814,7 @@ export function useTimelock(contractAddress?: Address) {
     // Contract info
     contract: {
       address: contractAddress,
-      abi: timelockAbi,
+      abi: DGPTimelockController,
     },
   };
 }
@@ -782,12 +898,16 @@ const handleExecute = async (operation: OperationDetails) => {
 };
 
 // Calculate operation ID
-const operationId = hashOperation(
+const operationId = await hashOperation(
   targetAddress,
   0n,
   encodedData,
   ZERO_HASH,
   ZERO_HASH
 );
+
+// Check operation state
+const state = await getOperationState(operationId);
+// 0 = Unset, 1 = Pending, 2 = Ready, 3 = Done
 
 */
