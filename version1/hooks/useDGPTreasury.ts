@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt, useWatchContractEvent, useBalance, usePublicClient } from 'wagmi';
 import { Address } from 'viem';
-import { treasuryAbi } from '@/lib/abi/core/treasury';
+import { DGPTreasury } from '@/lib/abis';
 
 export interface TreasuryConfig {
   governor: Address;
@@ -31,7 +31,7 @@ export function useTreasury(contractAddress?: Address) {
     refetch: refetchGovernor,
   } = useReadContract({
     address: contractAddress,
-    abi: treasuryAbi,
+    abi: DGPTreasury,
     functionName: 'governor',
     query: {
       enabled: !!contractAddress,
@@ -44,14 +44,14 @@ export function useTreasury(contractAddress?: Address) {
     refetch: refetchTimelock,
   } = useReadContract({
     address: contractAddress,
-    abi: treasuryAbi,
+    abi: DGPTreasury,
     functionName: 'timelock',
     query: {
       enabled: !!contractAddress,
     },
   });
 
-  // Get native ETH balance using wagmi's useBalance hook (more efficient)
+  // Get native ETH balance using wagmi's useBalance hook (most efficient)
   const {
     data: nativeBalance,
     isLoading: isLoadingNativeBalance,
@@ -63,14 +63,14 @@ export function useTreasury(contractAddress?: Address) {
     },
   });
 
-  // Get ETH balance from contract (alternative if contract has getETHBalance)
+  // Get ETH balance from contract
   const {
     data: ethBalanceData,
     refetch: refetchEthBalance,
     isLoading: isLoadingEthBalance,
   } = useReadContract({
     address: contractAddress,
-    abi: treasuryAbi,
+    abi: DGPTreasury,
     functionName: 'getETHBalance',
     query: {
       enabled: !!contractAddress,
@@ -105,7 +105,6 @@ export function useTreasury(contractAddress?: Address) {
   const { 
     isLoading: isWaitingForWithdrawToken,
     isSuccess: isWithdrawTokenSuccess,
-    // data: withdrawTokenReceipt
   } = useWaitForTransactionReceipt({
     hash: withdrawTokenTxHash,
   });
@@ -118,10 +117,10 @@ export function useTreasury(contractAddress?: Address) {
     }
   }, [isWithdrawETHSuccess, refetchEthBalance, refetchNativeBalance]);
 
-  // Event listeners with proper onLogs syntax
+  // Event listeners
   useWatchContractEvent({
     address: contractAddress,
-    abi: treasuryAbi,
+    abi: DGPTreasury,
     eventName: 'ETHReceived',
     onLogs() {
       refetchEthBalance();
@@ -131,7 +130,7 @@ export function useTreasury(contractAddress?: Address) {
 
   useWatchContractEvent({
     address: contractAddress,
-    abi: treasuryAbi,
+    abi: DGPTreasury,
     eventName: 'ETHWithdrawn',
     onLogs() {
       refetchEthBalance();
@@ -141,25 +140,8 @@ export function useTreasury(contractAddress?: Address) {
 
   useWatchContractEvent({
     address: contractAddress,
-    abi: treasuryAbi,
+    abi: DGPTreasury,
     eventName: 'TokenWithdrawn',
-    onLogs(logs) {
-      logs.forEach(log => {
-        if ('args' in log && log.args) {
-          const args = log.args as { token?: Address };
-          if (args.token) {
-            const tokenAddress = args.token;
-            getTokenBalance(tokenAddress);
-          }
-        }
-      });
-    },
-  });
-
-  useWatchContractEvent({
-    address: contractAddress,
-    abi: treasuryAbi,
-    eventName: 'TokenReceived',
     onLogs(logs) {
       logs.forEach(log => {
         if ('args' in log && log.args) {
@@ -180,7 +162,7 @@ export function useTreasury(contractAddress?: Address) {
     try {
       const result = await publicClient.readContract({
         address: contractAddress,
-        abi: treasuryAbi,
+        abi: DGPTreasury,
         functionName: 'getTokenBalance',
         args: [tokenAddress],
       });
@@ -240,7 +222,7 @@ export function useTreasury(contractAddress?: Address) {
     try {
       const hash = await withdrawETHAsync({
         address: contractAddress,
-        abi: treasuryAbi,
+        abi: DGPTreasury,
         functionName: 'withdrawETH',
         args: [recipient, amount],
       });
@@ -267,7 +249,7 @@ export function useTreasury(contractAddress?: Address) {
     try {
       const hash = await withdrawTokenAsync({
         address: contractAddress,
-        abi: treasuryAbi,
+        abi: DGPTreasury,
         functionName: 'withdrawToken',
         args: [token, recipient, amount],
       });
@@ -278,64 +260,6 @@ export function useTreasury(contractAddress?: Address) {
       throw error;
     }
   }, [contractAddress, withdrawTokenAsync, resetWithdrawToken]);
-
-  // Execute arbitrary transaction from treasury (if supported)
-  const executeTransaction = useCallback(async (
-    target: Address,
-    value: bigint,
-    data: string
-  ) => {
-    if (!contractAddress) {
-      throw new Error('Contract address not provided');
-    }
-
-    try {
-      const hash = await withdrawETHAsync({
-        address: contractAddress,
-        abi: treasuryAbi,
-        functionName: 'execute',
-        args: [target, value, data],
-      });
-
-      return hash;
-    } catch (error) {
-      console.error('Error executing transaction:', error);
-      throw error;
-    }
-  }, [contractAddress, withdrawETHAsync]);
-
-  // Check if treasury can receive ETH (has receive/fallback)
-  const canReceiveETH = useCallback(async (): Promise<boolean> => {
-    if (!contractAddress || !publicClient) return false;
-    
-    try {
-      const result = await publicClient.readContract({
-        address: contractAddress,
-        abi: treasuryAbi,
-        functionName: 'canReceiveETH',
-      });
-      return result as boolean;
-    } catch {
-      return false;
-    }
-  }, [contractAddress, publicClient]);
-
-  // Get all tracked tokens (if contract supports it)
-  const getTrackedTokens = useCallback(async (): Promise<Address[]> => {
-    if (!contractAddress || !publicClient) return [];
-    
-    try {
-      const result = await publicClient.readContract({
-        address: contractAddress,
-        abi: treasuryAbi,
-        functionName: 'getTrackedTokens',
-      });
-      return (result as Address[]) || [];
-    } catch (error) {
-      console.error('Error getting tracked tokens:', error);
-      return [];
-    }
-  }, [contractAddress, publicClient]);
 
   // Refresh all data
   const refresh = useCallback(async () => {
@@ -361,7 +285,7 @@ export function useTreasury(contractAddress?: Address) {
     
     // Balances
     ethBalance: ethBalanceData ? BigInt(ethBalanceData.toString()) : 0n,
-    nativeBalance: nativeBalance?.value || 0n, // Direct ETH balance
+    nativeBalance: nativeBalance?.value || 0n, // Direct ETH balance from chain
     tokenBalances,
     
     // Loading states
@@ -379,18 +303,15 @@ export function useTreasury(contractAddress?: Address) {
     // Actions
     withdrawETH,
     withdrawToken,
-    executeTransaction,
     getTokenBalance,
     getTokenBalances,
     refreshTokenBalance,
-    canReceiveETH,
-    getTrackedTokens,
     refresh,
 
     // Contract info
     contract: {
       address: contractAddress,
-      abi: treasuryAbi,
+      abi: DGPTreasury,
     },
   };
 }
@@ -403,6 +324,7 @@ const {
   ethBalance,
   nativeBalance,
   tokenBalances,
+  config,
   getTokenBalance,
   withdrawETH,
   withdrawToken,
@@ -412,6 +334,10 @@ const {
   withdrawETHError,
   withdrawTokenError
 } = useTreasury(treasuryAddress);
+
+// Check treasury configuration
+console.log('Governor:', config.governor);
+console.log('Timelock:', config.timelock);
 
 // Get token balance
 useEffect(() => {
@@ -457,14 +383,19 @@ const handleWithdrawTokens = async () => {
   }
 };
 
-// Display ETH balance
-console.log('ETH Balance:', formatEther(ethBalance));
+// Display ETH balance (from contract)
+console.log('Contract ETH Balance:', formatEther(ethBalance));
 
-// Display native balance (from useBalance)
+// Display native balance (from chain via useBalance - most accurate)
 console.log('Native Balance:', formatEther(nativeBalance));
 
 // Display token balance
 const usdcBalance = tokenBalances[usdcAddress];
-console.log('USDC Balance:', formatUnits(usdcBalance || 0n, 6));
+if (usdcBalance) {
+  console.log('USDC Balance:', formatUnits(usdcBalance, 6));
+}
+
+// Note: Only timelock or governor can call withdraw functions
+// Make sure the connected wallet has the appropriate permissions
 
 */
