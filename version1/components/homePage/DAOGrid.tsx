@@ -8,7 +8,24 @@ import { useGovernorFactory } from '@/hooks/useGovernorFactory';
 import { useGovernor } from '@/hooks/useDGPGovernor';
 import { useDAOFilters } from '@/hooks/useDAOFilters';
 import Image from 'next/image';
-import { DAO } from '@/types/dao';
+import { GovernorFactory_Address } from '@/lib/addresses';
+
+interface DAO {
+  id: string;
+  name: string;
+  description?: string;
+  category?: string;
+  status?: 'active' | 'new' | 'trending';
+  members?: number;
+  address: string;
+  tags?: string[];
+  logo?: string;
+  createdAt?: number;
+  tokenType?: number;
+  token?: string;
+  timelock?: string;
+  treasury?: string;
+}
 
 // Update the DAOCard component
 const DAOCard = React.memo(({ dao }: { dao: DAO }) => {
@@ -102,44 +119,44 @@ const DAOCard = React.memo(({ dao }: { dao: DAO }) => {
                   {statusBadge.label}
                 </span>
               </div>
-              <p className="mt-1 text-sm text-gray-500 line-clamp-2">{dao.description}</p>
+              <p className="text-sm text-gray-500 mt-1 line-clamp-2">
+                {dao.description || 'No description available'}
+              </p>
             </div>
           </div>
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(dao.category)}`}>
-            {dao.category.charAt(0).toUpperCase() + dao.category.slice(1)}
-          </span>
-          {dao.tags?.slice(0, 3).map((tag) => (
-            <span key={tag} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-              {tag}
+          {dao.category && (
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(dao.category)}`}>
+              {dao.category.charAt(0).toUpperCase() + dao.category.slice(1)}
             </span>
-          ))}
+          )}
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+            <Users className="w-3.5 h-3.5 mr-1" />
+            {dao.members?.toLocaleString() || '0'} Members
+          </span>
         </div>
 
         <div className="mt-6 pt-6 border-t border-gray-100">
-          <div className="grid grid-cols-3 gap-4">
-            <div className="text-center">
-              <dt className="text-sm font-medium text-gray-500">Members</dt>
-              <dd className="mt-1 text-sm font-medium text-gray-900 flex items-center justify-center">
-                <Users className="h-4 w-4 mr-1 text-gray-400" />
-                {(dao.members / 1000).toFixed(1)}K
-              </dd>
-            </div>
-            <div className="text-center">
-              <dt className="text-sm font-medium text-gray-500">Proposals</dt>
-              <dd className="mt-1 text-sm font-medium text-gray-900 flex items-center justify-center">
-                <FileText className="h-4 w-4 mr-1 text-gray-400" />
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div>
+              <p className="text-sm font-medium text-gray-500">Proposals</p>
+              <p className="text-lg font-semibold text-gray-900">
                 {isLoadingProposals ? '...' : proposals.length}
-              </dd>
+              </p>
             </div>
-            <div className="text-center">
-              <dt className="text-sm font-medium text-gray-500">Active</dt>
-              <dd className="mt-1 text-sm font-medium text-gray-900 flex items-center justify-center">
-                <Clock className="h-4 w-4 mr-1 text-gray-400" />
+            <div>
+              <p className="text-sm font-medium text-gray-500">Active</p>
+              <p className="text-lg font-semibold text-green-600">
                 {isLoadingProposals ? '...' : activeProposals.length}
-              </dd>
+              </p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Created</p>
+              <p className="text-sm text-gray-500">
+                {dao.createdAt ? new Date(Number(dao.createdAt) * 1000).toLocaleDateString() : 'N/A'}
+              </p>
             </div>
           </div>
         </div>
@@ -189,31 +206,74 @@ const DAOGrid: React.FC = () => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [daos, setDaos] = useState<DAO[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   // Use the governor factory to get all DAOs
   const { 
-    governors,
-    isLoading: isLoadingGovernors,
-    error: governorsError 
-  } = useGovernorFactory();
+    getDAOById,
+    getAllDAOs,
+    isLoading: isLoadingDAOs,
+    error: daosError 
+  } = useGovernorFactory(GovernorFactory_Address);
 
-  // Transform governors to DAO format
-  useEffect(() => {
-    if (governors) {
-      const mappedDaos = governors.map((governor: any, index: number) => ({
-        id: `dao-${index}`,
-        name: governor.name || `DAO ${index + 1}`,
-        description: governor.description || 'A decentralized autonomous organization',
+  // Fetch DAO details by ID
+  const fetchDAOById = useCallback(async (id: number): Promise<DAO | null> => {
+    try {
+      const daoData = await getDAOById(id);
+      if (!daoData) return null;
+      
+      return {
+        id: `dao-${id}`,
+        name: `DAO ${id + 1}`,
+        description: 'A decentralized autonomous organization',
         category: 'governance',
-        status: index % 3 === 0 ? 'trending' : index % 2 === 0 ? 'new' : 'active',
+        status: id % 3 === 0 ? 'trending' : id % 2 === 0 ? 'new' : 'active',
         members: Math.floor(Math.random() * 10000) + 1000,
-        address: governor.address,
+        address: daoData.governor,
+        token: daoData.token,
+        timelock: daoData.timelock,
+        treasury: daoData.treasury,
+        tokenType: daoData.tokenType,
+        createdAt: Number(daoData.createdAt),
         tags: ['governance', 'voting', 'proposals'],
-      }));
-      setDaos(mappedDaos);
-      setIsLoading(false);
+      };
+    } catch (err) {
+      console.error(`Error fetching DAO with ID ${id}:`, err);
+      return null;
     }
-  }, [governors]);
+  }, [getDAOById]);
+
+  // Fetch all DAOs when the component mounts
+  useEffect(() => {
+    const fetchAllDAOs = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        // First, get all DAO IDs
+        const daoCount = await getAllDAOs?.();
+        if (!daoCount) return;
+        
+        // Then, fetch each DAO's details
+        const daoPromises = [];
+        for (let i = 0; i < daoCount; i++) {
+          daoPromises.push(fetchDAOById(i));
+        }
+        
+        const daoResults = await Promise.all(daoPromises);
+        const validDAOs = daoResults.filter((dao): dao is DAO => dao !== null);
+        
+        setDaos(validDAOs);
+      } catch (err) {
+        console.error('Error fetching DAOs:', err);
+        setError('Failed to load DAOs. Please try again later.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchAllDAOs();
+  }, [fetchDAOById, getAllDAOs]);
 
   // Update the useDAOFilters hook to use the daos state
   const {
@@ -226,10 +286,11 @@ const DAOGrid: React.FC = () => {
     paginatedDAOs,
     setCurrentPage
   } = useDAOFilters({
-    daos,
     searchQuery,
     selectedCategory,
     selectedStatus,
+    allDAOs: daos,
+    isLoading: isLoading || isLoadingDAOs,
   });
 
   // Handle search input change with debounce
@@ -262,8 +323,48 @@ const DAOGrid: React.FC = () => {
     return count;
   }, [selectedCategory, selectedStatus, searchQuery]);
 
-  // Rest of the component remains the same...
-  // [Previous JSX code for the filters and grid layout]
+  // Handle pagination
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Show loading state
+  if (isLoading || isLoadingDAOs) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {[...Array(6)].map((_, i) => (
+          <DAOCardSkeleton key={i} />
+        ))}
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error || daosError) {
+    return (
+      <div className="text-center py-12">
+        <div className="text-red-500 text-lg font-medium mb-2">
+          {error || 'Failed to load DAOs'}
+        </div>
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  // Show empty state
+  if (daos.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <div className="text-gray-500 text-lg">No DAOs found</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -298,20 +399,33 @@ const DAOGrid: React.FC = () => {
 
       {/* Filter Panel */}
       {isFilterOpen && (
-        <div className="bg-white p-4 rounded-lg shadow border border-gray-200">
-          <div className="flex justify-between items-center mb-4">
+        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-medium text-gray-900">Filters</h3>
-            <button
-              type="button"
-              onClick={() => setIsFilterOpen(false)}
-              className="text-gray-400 hover:text-gray-500"
-            >
-              <X className="h-5 w-5" />
-            </button>
+            <div className="flex items-center space-x-2">
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="text-sm text-gray-500 hover:text-gray-700"
+              >
+                Clear all
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsFilterOpen(false)}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
           </div>
-          <div className="space-y-4">
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Category Filter */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Category
+              </label>
               <div className="space-y-2">
                 {categoryOptions.map((category) => (
                   <div key={category.id} className="flex items-center">
@@ -325,16 +439,23 @@ const DAOGrid: React.FC = () => {
                     />
                     <label
                       htmlFor={`category-${category.id}`}
-                      className="ml-3 text-sm text-gray-700"
+                      className="ml-3 text-sm text-gray-700 flex items-center"
                     >
                       {category.label}
+                      <span className="ml-2 text-xs text-gray-500">
+                        ({category.count})
+                      </span>
                     </label>
                   </div>
                 ))}
               </div>
             </div>
+
+            {/* Status Filter */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Status
+              </label>
               <div className="space-y-2">
                 {statusOptions.map((status) => (
                   <div key={status.id} className="flex items-center">
@@ -348,35 +469,26 @@ const DAOGrid: React.FC = () => {
                     />
                     <label
                       htmlFor={`status-${status.id}`}
-                      className="ml-3 text-sm text-gray-700"
+                      className="ml-3 text-sm text-gray-700 flex items-center"
                     >
+                      <span
+                        className={`w-2.5 h-2.5 rounded-full ${status.color} mr-2`}
+                      ></span>
                       {status.label}
+                      <span className="ml-2 text-xs text-gray-500">
+                        ({status.count})
+                      </span>
                     </label>
                   </div>
                 ))}
               </div>
-            </div>
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={clearFilters}
-                className="text-sm text-blue-600 hover:text-blue-800"
-              >
-                Clear all filters
-              </button>
             </div>
           </div>
         </div>
       )}
 
       {/* DAO Grid */}
-      {isLoading || isLoadingGovernors ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(6)].map((_, i) => (
-            <DAOCardSkeleton key={i} />
-          ))}
-        </div>
-      ) : (
+      {filteredDAOs.length > 0 ? (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {paginatedDAOs.map((dao) => (
@@ -386,19 +498,19 @@ const DAOGrid: React.FC = () => {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
+            <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 rounded-b-lg">
               <div className="flex flex-1 justify-between sm:hidden">
                 <button
-                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                  onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
                   disabled={currentPage === 1}
-                  className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Previous
                 </button>
                 <button
-                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                  onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
                   disabled={currentPage === totalPages}
-                  className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Next
                 </button>
@@ -414,22 +526,19 @@ const DAOGrid: React.FC = () => {
                   </p>
                 </div>
                 <div>
-                  <nav
-                    className="isolate inline-flex -space-x-px rounded-md shadow-sm"
-                    aria-label="Pagination"
-                  >
+                  <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
                     <button
-                      onClick={() => setCurrentPage(1)}
+                      onClick={() => handlePageChange(1)}
                       disabled={currentPage === 1}
-                      className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:pointer-events-none"
+                      className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <span className="sr-only">First</span>
                       <ChevronsLeft className="h-5 w-5" aria-hidden="true" />
                     </button>
                     <button
-                      onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                      onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
                       disabled={currentPage === 1}
-                      className="relative inline-flex items-center px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:pointer-events-none"
+                      className="relative inline-flex items-center px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <span className="sr-only">Previous</span>
                       <ChevronLeft className="h-5 w-5" aria-hidden="true" />
@@ -445,10 +554,11 @@ const DAOGrid: React.FC = () => {
                       } else {
                         pageNum = currentPage - 2 + i;
                       }
+                      
                       return (
                         <button
                           key={pageNum}
-                          onClick={() => setCurrentPage(pageNum)}
+                          onClick={() => handlePageChange(pageNum)}
                           className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
                             currentPage === pageNum
                               ? 'z-10 bg-blue-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600'
@@ -460,17 +570,17 @@ const DAOGrid: React.FC = () => {
                       );
                     })}
                     <button
-                      onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                      onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
                       disabled={currentPage === totalPages}
-                      className="relative inline-flex items-center px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:pointer-events-none"
+                      className="relative inline-flex items-center px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <span className="sr-only">Next</span>
                       <ChevronRight className="h-5 w-5" aria-hidden="true" />
                     </button>
                     <button
-                      onClick={() => setCurrentPage(totalPages)}
+                      onClick={() => handlePageChange(totalPages)}
                       disabled={currentPage === totalPages}
-                      className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:pointer-events-none"
+                      className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <span className="sr-only">Last</span>
                       <ChevronsRight className="h-5 w-5" aria-hidden="true" />
@@ -481,53 +591,15 @@ const DAOGrid: React.FC = () => {
             </div>
           )}
         </>
-      )}
-
-      {/* Error State */}
-      {!isLoading && !isLoadingGovernors && governorsError && (
+      ) : (
         <div className="text-center py-12">
-          <div className="text-red-500">Error loading DAOs: {governorsError.message}</div>
+          <div className="text-gray-500 text-lg">No DAOs match your filters</div>
           <button
-            onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            onClick={clearFilters}
+            className="mt-4 text-blue-600 hover:text-blue-800 text-sm font-medium"
           >
-            Retry
+            Clear all filters
           </button>
-        </div>
-      )}
-
-      {/* Empty State */}
-      {!isLoading && !isLoadingGovernors && !governorsError && filteredDAOs.length === 0 && (
-        <div className="text-center py-12">
-          <svg
-            className="mx-auto h-12 w-12 text-gray-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No DAOs found</h3>
-          <p className="mt-1 text-sm text-gray-500">
-            {searchQuery || selectedCategory !== 'all' || selectedStatus.length > 0
-              ? 'Try adjusting your search or filter criteria'
-              : 'There are currently no DAOs available.'}
-          </p>
-          <div className="mt-6">
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              Clear all filters
-            </button>
-          </div>
         </div>
       )}
     </div>
